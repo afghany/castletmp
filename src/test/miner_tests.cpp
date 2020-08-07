@@ -12,7 +12,7 @@
 #include "util.h"
 #include "wallet/wallet.h"
 
-#include "test/test_pivx.h"
+#include "test/test_castle.h"
 
 #include <boost/test/unit_test.hpp>
 
