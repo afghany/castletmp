@@ -5,7 +5,8 @@
 #ifndef SENDCHANGEADDRESSDIALOG_H
 #define SENDCHANGEADDRESSDIALOG_H
 
-#include <QDialog>
+#include "script/standard.h"
+#include "qt/pivx/focuseddialog.h"
 #include "qt/pivx/snackbar.h"
 
 class WalletModel;
@@ -14,7 +15,7 @@ namespace Ui {
 class SendChangeAddressDialog;
 }
 
-class SendChangeAddressDialog : public QDialog
+class SendChangeAddressDialog : public FocusedDialog
 {
     Q_OBJECT
 
@@ -23,7 +24,7 @@ public:
     ~SendChangeAddressDialog();
 
     void setAddress(QString address);
-    QString getAddress() const;
+    CTxDestination getDestination() const;
 
     void showEvent(QShowEvent* event) override;
 
@@ -31,11 +32,13 @@ private:
     WalletModel* walletModel;
     Ui::SendChangeAddressDialog *ui;
     SnackBar *snackBar = nullptr;
+    CTxDestination dest;
+
     void inform(const QString& text);
 
 private Q_SLOTS:
     void reset();
-    void save();
+    void accept() override;
 };
 
 #endif // SENDCHANGEADDRESSDIALOG_H

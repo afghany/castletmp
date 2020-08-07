@@ -25,30 +25,19 @@ SettingsDisplayOptionsWidget::SettingsDisplayOptionsWidget(PIVXGUI* _window, QWi
     ui->left->setProperty("cssClass", "container");
     ui->left->setContentsMargins(10,10,10,10);
 
-    // Title
-    ui->labelTitle->setText(tr("Display"));
+    // Title - Subtitle
     setCssTitleScreen(ui->labelTitle);
-
-    // Subtitle
-    ui->labelSubtitle1->setText(tr("Customize the display view options"));
     setCssSubtitleScreen(ui->labelSubtitle1);
 
-    ui->labelTitleLanguage->setText(tr("Language"));
     ui->labelTitleLanguage->setProperty("cssClass", "text-main-settings");
-
-    ui->labelTitleUnit->setText(tr("Unit to show amount"));
     ui->labelTitleUnit->setProperty("cssClass", "text-main-settings");
-
-    ui->labelTitleDigits->setText(tr("Decimal digits"));
     ui->labelTitleDigits->setProperty("cssClass", "text-main-settings");
-
-    ui->labelTitleUrl->setText(tr("Third party transactions URLs"));
     ui->labelTitleUrl->setProperty("cssClass", "text-main-settings");
+
     // TODO: Reconnect this option to an action. Hide it for now
     ui->labelTitleUrl->hide();
 
-    // Switch (hide for now)
-    ui->pushButtonSwitchBalance->setText(tr("Hide empty balances"));
+    // Switch Balance (hide for now)
     ui->pushButtonSwitchBalance->setProperty("cssClass", "btn-switch");
     ui->pushButtonSwitchBalance->setVisible(false);
 
@@ -105,7 +94,6 @@ SettingsDisplayOptionsWidget::SettingsDisplayOptionsWidget(PIVXGUI* _window, QWi
     setCssBtnSecondary(ui->pushButtonReset);
     setCssBtnSecondary(ui->pushButtonClean);
 
-    initLanguages();
     connect(ui->pushButtonSave, &QPushButton::clicked, [this] { Q_EMIT saveSettings(); });
     connect(ui->pushButtonReset, &QPushButton::clicked, this, &SettingsDisplayOptionsWidget::onResetClicked);
     connect(ui->pushButtonClean, &QPushButton::clicked, [this] { Q_EMIT discardSettings(); });
@@ -113,11 +101,15 @@ SettingsDisplayOptionsWidget::SettingsDisplayOptionsWidget(PIVXGUI* _window, QWi
 
 void SettingsDisplayOptionsWidget::initLanguages()
 {
+    const QString& selectedLang = this->clientModel->getOptionsModel()->getLang();
     /* Language selector */
     QDir translations(":translations");
     QString defaultStr = QString("(") + tr("default") + QString(")");
     ui->comboBoxLanguage->addItem(defaultStr, QVariant(""));
-    Q_FOREACH (const QString& langStr, translations.entryList()) {
+    QStringList list = translations.entryList();
+    int selectedIndex = 0;
+    for (int i = 0; i < list.size(); ++i) {
+        const QString& langStr = list[i];
         QLocale locale(langStr);
 
         /** check if the locale name consists of 2 parts (language_country) */
@@ -128,7 +120,12 @@ void SettingsDisplayOptionsWidget::initLanguages()
             /** display language strings as "native language (locale name)", e.g. "Deutsch (de)" */
             ui->comboBoxLanguage->addItem(locale.nativeLanguageName() + QString(" (") + langStr + QString(")"), QVariant(langStr));
         }
+        // Save selected index
+        if (langStr == selectedLang) {
+            selectedIndex = i + 1;
+        }
     }
+    ui->comboBoxLanguage->setCurrentIndex(selectedIndex);
 }
 
 void SettingsDisplayOptionsWidget::onResetClicked()
@@ -156,6 +153,7 @@ void SettingsDisplayOptionsWidget::loadClientModel()
 {
     if (clientModel) {
         ui->comboBoxUnit->setCurrentIndex(this->clientModel->getOptionsModel()->getDisplayUnit());
+        initLanguages();
     }
 }
 

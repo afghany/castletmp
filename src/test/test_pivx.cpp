@@ -1,5 +1,5 @@
 // Copyright (c) 2011-2013 The Bitcoin Core developers
-// Copyright (c) 2017-2020 The PIVX developers
+// Copyright (c) 2017-2020 The DIVX developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -9,6 +9,7 @@
 
 #include "main.h"
 #include "random.h"
+#include "script/sigcache.h"
 #include "txdb.h"
 #include "guiinterface.h"
 
@@ -27,6 +28,7 @@ BasicTestingSetup::BasicTestingSetup()
         RandomInit();
         ECC_Start();
         SetupEnvironment();
+        InitSignatureCache();
         fCheckBlockIndex = true;
         SelectParams(CBaseChainParams::MAIN);
 }
@@ -39,7 +41,7 @@ TestingSetup::TestingSetup()
 {
         ClearDatadirCache();
         pathTemp = GetTempPath() / strprintf("test_pivx_%lu_%i", (unsigned long)GetTime(), (int)(InsecureRandRange(100000)));
-        boost::filesystem::create_directories(pathTemp);
+        fs::create_directories(pathTemp);
         mapArgs["-datadir"] = pathTemp.string();
         pblocktree = new CBlockTreeDB(1 << 20, true);
         pcoinsdbview = new CCoinsViewDB(1 << 23, true);
@@ -65,7 +67,17 @@ TestingSetup::~TestingSetup()
         delete pcoinsTip;
         delete pcoinsdbview;
         delete pblocktree;
-        boost::filesystem::remove_all(pathTemp);
+        fs::remove_all(pathTemp);
+}
+
+CTxMemPoolEntry TestMemPoolEntryHelper::FromTx(CMutableTransaction &tx, CTxMemPool *pool) {
+    CTransaction txn(tx);
+    bool hasNoDependencies = pool ? pool->HasNoInputsOf(tx) : hadNoDependencies;
+    // Hack to assume either its completely dependent on other mempool txs or not at all
+    CAmount inChainValue = hasNoDependencies ? txn.GetValueOut() : 0;
+
+    return CTxMemPoolEntry(txn, nFee, nTime, dPriority, nHeight,
+                           hasNoDependencies, inChainValue, spendsCoinbaseOrCoinstake);
 }
 
 [[noreturn]] void Shutdown(void* parg)

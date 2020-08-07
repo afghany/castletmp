@@ -1,7 +1,7 @@
 // Copyright (c) 2011-2013 The PPCoin developers
 // Copyright (c) 2013-2014 The NovaCoin Developers
 // Copyright (c) 2014-2018 The BlackCoin Developers
-// Copyright (c) 2015-2020 The PIVX developers
+// Copyright (c) 2015-2020 The DIVX developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -49,7 +49,7 @@ static bool SelectBlockFromCandidates(
 
         //if the lowest block height (vSortedByTimestamp[0]) is >= switch height, use new modifier calc
         if (fFirstRun){
-            fModifierV2 = pindex->nHeight >= Params().GetConsensus().height_start_StakeModifierNewSelection;
+            fModifierV2 = Params().GetConsensus().NetworkUpgradeActive(pindex->nHeight, Consensus::UPGRADE_POS_V2);
             fFirstRun = false;
         }
 
@@ -113,11 +113,8 @@ bool GetOldModifier(const CBlockIndex* pindexFrom, uint64_t& nStakeModifier)
 bool GetOldStakeModifier(CStakeInput* stake, uint64_t& nStakeModifier)
 {
     CBlockIndex* pindexFrom = stake->GetIndexFrom();
-    printf("test0 %d\n", chainActive.Height());
     if (!pindexFrom) return error("%s : failed to get index from", __func__);
-    printf("test01 %d\n", chainActive.Height());
     if (stake->IsZPIV()) {
-        printf("test1\n");
         int64_t nTimeBlockFrom = pindexFrom->GetBlockTime();
         const int nHeightStop = std::min(chainActive.Height(), Params().GetConsensus().height_last_ZC_AccumCheckpoint-1);
         while (pindexFrom && pindexFrom->nHeight + 1 <= nHeightStop) {
@@ -129,10 +126,8 @@ bool GetOldStakeModifier(CStakeInput* stake, uint64_t& nStakeModifier)
         }
         return false;
 
-    } else if (!GetOldModifier(pindexFrom, nStakeModifier)) {
-         printf("test2\n");
+    } else if (!GetOldModifier(pindexFrom, nStakeModifier))
         return error("%s : failed to get kernel stake modifier", __func__);
-    }
 
     return true;
 }

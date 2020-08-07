@@ -7,12 +7,12 @@
 
 #include "chainparamsbase.h"
 #include "clientversion.h"
+#include "fs.h"
 #include "rpc/client.h"
 #include "rpc/protocol.h"
 #include "util.h"
 #include "utilstrencodings.h"
 
-#include <boost/filesystem/operations.hpp>
 #include <stdio.h>
 
 #include <event2/event.h>
@@ -84,7 +84,7 @@ static bool AppInitRPC(int argc, char* argv[])
         fprintf(stdout, "%s", strUsage.c_str());
         return false;
     }
-    if (!boost::filesystem::is_directory(GetDataDir(false))) {
+    if (!fs::is_directory(GetDataDir(false))) {
         fprintf(stderr, "Error: Specified data directory \"%s\" does not exist.\n", mapArgs["-datadir"].c_str());
         return false;
     }
@@ -182,7 +182,7 @@ UniValue CallRPC(const std::string& strMethod, const UniValue& params)
     evhttp_add_header(output_headers, "Authorization", (std::string("Basic ") + EncodeBase64(strRPCUserColonPass)).c_str());
 
     // Attach request data
-    std::string strRequest = JSONRPCRequest(strMethod, params, 1);
+    std::string strRequest = JSONRPCRequestObj(strMethod, params, 1).write() + "\n";
     struct evbuffer * output_buffer = evhttp_request_get_output_buffer(req);
     assert(output_buffer);
     evbuffer_add(output_buffer, strRequest.data(), strRequest.size());

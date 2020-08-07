@@ -33,7 +33,7 @@ void DumpMasternodes();
 class CMasternodeDB
 {
 private:
-    boost::filesystem::path pathMN;
+    fs::path pathMN;
     std::string strMagicMessage;
 
 public:
@@ -83,7 +83,7 @@ public:
     ADD_SERIALIZE_METHODS;
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion)
+    inline void SerializationOp(Stream& s, Operation ser_action)
     {
         LOCK(cs);
         READWRITE(vMasternodes);
@@ -127,9 +127,6 @@ public:
 
     /// Find an entry in the masternode list that is next to be paid
     CMasternode* GetNextMasternodeInQueueForPayment(int nBlockHeight, bool fFilterSigTime, int& nCount);
-
-    /// Find a random entry
-    CMasternode* FindRandomNotInVec(std::vector<CTxIn>& vecToExclude, int protocolVersion = -1);
 
     /// Get the current winner for this block
     CMasternode* GetCurrentMasterNode(int mod = 1, int64_t nBlockHeight = 0, int minProtocol = 0);

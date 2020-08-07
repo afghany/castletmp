@@ -4,13 +4,14 @@
 
 #include "qt/pivx/welcomecontentwidget.h"
 #include "qt/pivx/forms/ui_welcomecontentwidget.h"
+
+#include "guiutil.h"
+
+#include <QDir>
 #include <QFile>
 #include <QListView>
-#include <QDir>
-#include "guiutil.h"
+#include <QScreen>
 #include <QSettings>
-#include <iostream>
-#include <QDesktopWidget>
 
 WelcomeContentWidget::WelcomeContentWidget(QWidget *parent) :
     QDialog(parent, Qt::FramelessWindowHint | Qt::WindowSystemMenuHint),
@@ -70,7 +71,6 @@ WelcomeContentWidget::WelcomeContentWidget(QWidget *parent) :
     ui->labelLine1->setProperty("cssClass", "line-welcome");
     ui->labelLine2->setProperty("cssClass", "line-welcome");
     ui->labelLine3->setProperty("cssClass", "line-welcome");
-
 
     ui->groupBoxName->setProperty("cssClass", "container-welcome-box");
     ui->groupContainer->setProperty("cssClass", "container-welcome-box");
@@ -164,15 +164,15 @@ WelcomeContentWidget::WelcomeContentWidget(QWidget *parent) :
     connect(ui->comboBoxLanguage, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &WelcomeContentWidget::checkLanguage);
     initLanguages();
 
-
     // Resize window and move to center of desktop, disallow resizing
     QRect r(QPoint(), size());
     resize(r.size());
     setFixedSize(r.size());
-    move(QApplication::desktop()->screenGeometry().center() - r.center());
+    move(QGuiApplication::primaryScreen()->geometry().center() - r.center());
 }
 
-void WelcomeContentWidget::initLanguages(){
+void WelcomeContentWidget::initLanguages()
+{
     /* Language selector */
     QDir translations(":translations");
     ui->comboBoxLanguage->addItem(QString("(") + tr("default") + QString(")"), QVariant(""));
@@ -180,22 +180,23 @@ void WelcomeContentWidget::initLanguages(){
         QLocale locale(langStr);
 
         /** check if the locale name consists of 2 parts (language_country) */
-        if(langStr.contains("_")){
+        if (langStr.contains("_")) {
             /** display language strings as "native language - native country (locale name)", e.g. "Deutsch - Deutschland (de)" */
             ui->comboBoxLanguage->addItem(locale.nativeLanguageName() + QString(" - ") + locale.nativeCountryName() + QString(" (") + langStr + QString(")"), QVariant(langStr));
-        }
-        else{
+        } else {
             /** display language strings as "native language (locale name)", e.g. "Deutsch (de)" */
             ui->comboBoxLanguage->addItem(locale.nativeLanguageName() + QString(" (") + langStr + QString(")"), QVariant(langStr));
         }
     }
 }
 
-void WelcomeContentWidget::setModel(OptionsModel *model){
+void WelcomeContentWidget::setModel(OptionsModel *model)
+{
     this->model = model;
 }
 
-void WelcomeContentWidget::checkLanguage(){
+void WelcomeContentWidget::checkLanguage()
+{
     QString sel = ui->comboBoxLanguage->currentData().toString();
     QSettings settings;
     if (settings.value("language") != sel){
@@ -206,8 +207,8 @@ void WelcomeContentWidget::checkLanguage(){
     }
 }
 
-void WelcomeContentWidget::onNextClicked(){
-
+void WelcomeContentWidget::onNextClicked()
+{
     switch(pos){
         case 0:{
             ui->stackedWidget->setCurrentIndex(1);
@@ -254,7 +255,8 @@ void WelcomeContentWidget::onNextClicked(){
 
 }
 
-void WelcomeContentWidget::onBackClicked(){
+void WelcomeContentWidget::onBackClicked()
+{
     if (pos == 0) return;
     pos--;
     switch(pos){
@@ -308,7 +310,8 @@ void WelcomeContentWidget::onBackClicked(){
     }
 }
 
-void WelcomeContentWidget::onSkipClicked(){
+void WelcomeContentWidget::onSkipClicked()
+{
     isOk = true;
     accept();
 }

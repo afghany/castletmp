@@ -10,6 +10,7 @@
 #include "masternode-payments.h"
 #include "masternode-sync.h"
 #include "masternodeman.h"
+#include "netbase.h"
 #include "sync.h"
 #include "util.h"
 #include "wallet/wallet.h"
@@ -358,17 +359,25 @@ bool CMasternodeBroadcast::Create(std::string strService, std::string strKeyMast
         return false;
     }
 
-    if (!pwalletMain->GetMasternodeVinAndKeys(txin, pubKeyCollateralAddressNew, keyCollateralAddressNew, strTxHash, strOutputIndex)) {
-        strErrorRet = strprintf("Could not allocate txin %s:%s for masternode %s", strTxHash, strOutputIndex, strService);
-        LogPrint(BCLog::MASTERNODE,"CMasternodeBroadcast::Create -- %s\n", strErrorRet);
+    std::string strError;
+    if (!pwalletMain->GetMasternodeVinAndKeys(txin, pubKeyCollateralAddressNew, keyCollateralAddressNew, strTxHash, strOutputIndex, strError)) {
+        strErrorRet = strError; // GetMasternodeVinAndKeys logs this error. Only returned for GUI error notification.
+        LogPrint(BCLog::MASTERNODE,"CMasternodeBroadcast::Create -- %s\n", strprintf("Could not allocate txin %s:%s for masternode %s", strTxHash, strOutputIndex, strService));
         return false;
     }
 
+    int nPort;
+    int nDefaultPort = Params().GetDefaultPort();
+    std::string strHost;
+    SplitHostPort(strService, nPort, strHost);
+    if (nPort == 0) nPort = nDefaultPort;
+    CService _service(LookupNumeric(strHost.c_str(), nPort));
+
     // The service needs the correct default port to work properly
-    if(!CheckDefaultPort(strService, strErrorRet, "CMasternodeBroadcast::Create"))
+    if (!CheckDefaultPort(_service, strErrorRet, "CMasternodeBroadcast::Create"))
         return false;
 
-    return Create(txin, CService(strService), keyCollateralAddressNew, pubKeyCollateralAddressNew, keyMasternodeNew, pubKeyMasternodeNew, strErrorRet, mnbRet);
+    return Create(txin, _service, keyCollateralAddressNew, pubKeyCollateralAddressNew, keyMasternodeNew, pubKeyMasternodeNew, strErrorRet, mnbRet);
 }
 
 bool CMasternodeBroadcast::Create(CTxIn txin, CService service, CKey keyCollateralAddressNew, CPubKey pubKeyCollateralAddressNew, CKey keyMasternodeNew, CPubKey pubKeyMasternodeNew, std::string& strErrorRet, CMasternodeBroadcast& mnbRet)
@@ -376,18 +385,12 @@ bool CMasternodeBroadcast::Create(CTxIn txin, CService service, CKey keyCollater
     // wait for reindex and/or import to finish
     if (fImporting || fReindex) return false;
 
-    bool fNewSigs = false;
-    {
-        LOCK(cs_main);
-        fNewSigs = chainActive.NewSigsActive();
-    }
-
     LogPrint(BCLog::MASTERNODE, "CMasternodeBroadcast::Create -- pubKeyCollateralAddressNew = %s, pubKeyMasternodeNew.GetID() = %s\n",
-        CBitcoinAddress(pubKeyCollateralAddressNew.GetID()).ToString(),
+             EncodeDestination(pubKeyCollateralAddressNew.GetID()),
         pubKeyMasternodeNew.GetID().ToString());
 
     CMasternodePing mnp(txin);
-    if (!mnp.Sign(keyMasternodeNew, pubKeyMasternodeNew, fNewSigs)) {
+    if (!mnp.Sign(keyMasternodeNew, pubKeyMasternodeNew)) {
         strErrorRet = strprintf("Failed to sign ping, masternode=%s", txin.prevout.hash.ToString());
         LogPrint(BCLog::MASTERNODE,"CMasternodeBroadcast::Create -- %s\n", strErrorRet);
         mnbRet = CMasternodeBroadcast();
@@ -404,7 +407,7 @@ bool CMasternodeBroadcast::Create(CTxIn txin, CService service, CKey keyCollater
     }
 
     mnbRet.lastPing = mnp;
-    if (!mnbRet.Sign(keyCollateralAddressNew, pubKeyCollateralAddressNew, fNewSigs)) {
+    if (!mnbRet.Sign(keyCollateralAddressNew, pubKeyCollateralAddressNew)) {
         strErrorRet = strprintf("Failed to sign broadcast, masternode=%s", txin.prevout.hash.ToString());
         LogPrint(BCLog::MASTERNODE,"CMasternodeBroadcast::Create -- %s\n", strErrorRet);
         mnbRet = CMasternodeBroadcast();
@@ -414,18 +417,11 @@ bool CMasternodeBroadcast::Create(CTxIn txin, CService service, CKey keyCollater
     return true;
 }
 
-bool CMasternodeBroadcast::Sign(const CKey& key, const CPubKey& pubKey, const bool fNewSigs)
+bool CMasternodeBroadcast::Sign(const CKey& key, const CPubKey& pubKey)
 {
     std::string strError = "";
-    std::string strMessage;
-
-    if (fNewSigs) {
-        nMessVersion = MessageVersion::MESS_VER_HASH;
-        strMessage = GetSignatureHash().GetHex();
-    } else {
-        nMessVersion = MessageVersion::MESS_VER_STRMESS;
-        strMessage = GetStrMessage();
-    }
+    nMessVersion = MessageVersion::MESS_VER_HASH;
+    const std::string strMessage = GetSignatureHash().GetHex();
 
     if (!CMessageSigner::SignMessage(strMessage, vchSig, key)) {
         return error("%s : SignMessage() (nMessVersion=%d) failed", __func__, nMessVersion);
@@ -439,7 +435,7 @@ bool CMasternodeBroadcast::Sign(const CKey& key, const CPubKey& pubKey, const bo
     return true;
 }
 
-bool CMasternodeBroadcast::Sign(const std::string strSignKey, const bool fNewSigs)
+bool CMasternodeBroadcast::Sign(const std::string strSignKey)
 {
     CKey key;
     CPubKey pubkey;
@@ -448,7 +444,7 @@ bool CMasternodeBroadcast::Sign(const std::string strSignKey, const bool fNewSig
         return error("%s : Invalid strSignKey", __func__);
     }
 
-    return Sign(key, pubkey, fNewSigs);
+    return Sign(key, pubkey);
 }
 
 bool CMasternodeBroadcast::CheckSignature() const
@@ -466,14 +462,13 @@ bool CMasternodeBroadcast::CheckSignature() const
     return true;
 }
 
-bool CMasternodeBroadcast::CheckDefaultPort(std::string strService, std::string& strErrorRet, std::string strContext)
+bool CMasternodeBroadcast::CheckDefaultPort(CService service, std::string& strErrorRet, const std::string& strContext)
 {
-    CService service = CService(strService);
     int nDefaultPort = Params().GetDefaultPort();
 
     if (service.GetPort() != nDefaultPort) {
         strErrorRet = strprintf("Invalid port %u for masternode %s, only %d is supported on %s-net.",
-                                        service.GetPort(), strService, nDefaultPort, Params().NetworkIDString());
+            service.GetPort(), service.ToString(), nDefaultPort, Params().NetworkIDString());
         LogPrint(BCLog::MASTERNODE, "%s - %s\n", strContext, strErrorRet);
         return false;
     }
@@ -571,7 +566,8 @@ bool CMasternodeBroadcast::CheckInputsAndAdd(int& nDoS)
 {
     // we are a masternode with the same vin (i.e. already activated) and this mnb is ours (matches our Masternode privkey)
     // so nothing to do here for us
-    if (fMasterNode && vin.prevout == activeMasternode.vin.prevout && pubKeyMasternode == activeMasternode.pubKeyMasternode)
+    if (fMasterNode && activeMasternode.vin != nullopt &&
+            vin.prevout == activeMasternode.vin->prevout && pubKeyMasternode == activeMasternode.pubKeyMasternode)
         return true;
 
     // incorrect ping or its sigTime
