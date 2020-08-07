@@ -1,6 +1,6 @@
 [Protocol]
-exec=pivx-qt '%u'
-protocol=pivx
+exec=castle-qt '%u'
+protocol=castle
 input=none
 output=none
 helper=true

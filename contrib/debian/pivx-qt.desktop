@@ -1,13 +1,13 @@
 [Desktop Entry]
 Version=1.0
-Name=PIVX Core
-Comment=PIVX P2P Cryptocurrency
-Comment[fr]=PIVX, monnaie virtuelle cryptographique pair à pair
-Comment[tr]=PIVX, eşten eşe kriptografik sanal para birimi
-Exec=pivx-qt %u
+Name=CASTLE Core
+Comment=CASTLE P2P Cryptocurrency
+Comment[fr]=CASTLE, monnaie virtuelle cryptographique pair à pair
+Comment[tr]=CASTLE, eşten eşe kriptografik sanal para birimi
+Exec=castle-qt %u
 Terminal=false
 Type=Application
-Icon=pivx128
-MimeType=x-scheme-handler/pivx;
+Icon=castle128
+MimeType=x-scheme-handler/castle;
 Categories=Office;Finance;
-StartupWMClass=Pivx-qt
+StartupWMClass=Castle-qt
