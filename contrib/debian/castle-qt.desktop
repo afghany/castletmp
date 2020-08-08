@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=CASTLE Core
+Comment=CASTLE P2P Cryptocurrency
+Comment[fr]=CASTLE, monnaie virtuelle cryptographique pair à pair
+Comment[tr]=CASTLE, eşten eşe kriptografik sanal para birimi
+Exec=castle-qt %u
+Terminal=false
+Type=Application
+Icon=castle128
+MimeType=x-scheme-handler/castle;
+Categories=Office;Finance;
+StartupWMClass=Castle-qt
